@@ -15,13 +15,13 @@ npm run build     # Production build
 
 ## Environment Variables
 
-Create a `.env` file with your Cognito configuration (from `terraform output`):
+Copy the example and fill in your Cognito values from `terraform output`:
 
-```env
-VITE_COGNITO_USER_POOL_ID=us-east-1_xxxxxxx
-VITE_COGNITO_CLIENT_ID=your-client-id
-VITE_AWS_REGION=us-east-1
+```bash
+cp .env.example .env
 ```
+
+See `.env.example` for the full list of variables.
 
 ## Dev Proxy
 

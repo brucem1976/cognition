@@ -13,15 +13,13 @@ npm run build     # Compile TypeScript
 
 ## Environment Variables
 
-Create a `.env` file:
+Copy the example and fill in your Cognito values from `terraform output`:
 
-```env
-COGNITO_CLIENT_ID=your-client-id
-COGNITO_USER_POOL_ID=us-east-1_xxxxxxx
-AWS_REGION=us-east-1
-FRONTEND_URL=http://localhost:5173
-PORT=3001
+```bash
+cp .env.example .env
 ```
+
+See `.env.example` for the full list of variables.
 
 ## API Endpoints
 
