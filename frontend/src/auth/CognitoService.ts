@@ -1,20 +1,20 @@
 import {
     CognitoIdentityProviderClient,
     SignUpCommand,
-    InitiateAuthCommand,
     ForgotPasswordCommand,
     ConfirmForgotPasswordCommand,
-    GlobalSignOutCommand,
-    RespondToAuthChallengeCommand,
-    ConfirmSignUpCommand
+    ConfirmSignUpCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 
 const CLIENT_ID = process.env.VITE_COGNITO_CLIENT_ID || "test-client-id";
 const REGION = process.env.VITE_AWS_REGION || "us-east-1";
+const API_BASE = process.env.VITE_API_BASE || '';
 
 export const client = new CognitoIdentityProviderClient({ region: REGION });
 
 export const CognitoService = {
+    // ---- Direct Cognito calls (no tokens involved) ----
+
     signUp: async (email: string, password: string, phoneNumber: string) => {
         const command = new SignUpCommand({
             ClientId: CLIENT_ID,
@@ -28,32 +28,13 @@ export const CognitoService = {
         return await client.send(command);
     },
 
-    signIn: async (email: string, password: string) => {
-        const command = new InitiateAuthCommand({
+    confirmSignUp: async (email: string, code: string) => {
+        const command = new ConfirmSignUpCommand({
             ClientId: CLIENT_ID,
-            AuthFlow: "USER_PASSWORD_AUTH",
-            AuthParameters: {
-                USERNAME: email,
-                PASSWORD: password
-            }
+            Username: email,
+            ConfirmationCode: code
         });
-
-        const response = await client.send(command);
-
-        if (response.AuthenticationResult) {
-            // Basic storage
-            if (response.AuthenticationResult.AccessToken) {
-                localStorage.setItem('access_token', response.AuthenticationResult.AccessToken);
-            }
-            if (response.AuthenticationResult.IdToken) {
-                localStorage.setItem('id_token', response.AuthenticationResult.IdToken);
-            }
-            if (response.AuthenticationResult.RefreshToken) {
-                localStorage.setItem('refresh_token', response.AuthenticationResult.RefreshToken);
-            }
-        }
-
-        return response;
+        return await client.send(command);
     },
 
     forgotPassword: async (email: string) => {
@@ -74,22 +55,69 @@ export const CognitoService = {
         return await client.send(command);
     },
 
-    confirmSignUp: async (email: string, code: string) => {
-        const command = new ConfirmSignUpCommand({
-            ClientId: CLIENT_ID,
-            Username: email,
-            ConfirmationCode: code
+    // ---- Backend proxy calls (tokens handled server-side) ----
+
+    signIn: async (email: string, password: string) => {
+        const response = await fetch(`${API_BASE}/auth/signin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, password }),
         });
-        return await client.send(command);
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Sign in failed');
+        }
+
+        return data;
     },
 
-    respondToAuthChallenge: async (challengeName: string, challengeResponses: Record<string, string>, session: string) => {
-        const command = new RespondToAuthChallengeCommand({
-            ClientId: CLIENT_ID,
-            ChallengeName: challengeName as any, // enum casting
-            ChallengeResponses: challengeResponses,
-            Session: session
+    respondToAuthChallenge: async (challengeName: string, code: string, session: string, username: string) => {
+        const response = await fetch(`${API_BASE}/auth/signin/mfa`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ challengeName, code, session, username }),
         });
-        return await client.send(command);
-    }
-}
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'MFA verification failed');
+        }
+
+        return data;
+    },
+
+    refreshToken: async () => {
+        const response = await fetch(`${API_BASE}/auth/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Token refresh failed');
+        }
+
+        return data;
+    },
+
+    signOut: async () => {
+        const response = await fetch(`${API_BASE}/auth/signout`, {
+            method: 'POST',
+            credentials: 'include',
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Sign out failed');
+        }
+
+        return data;
+    },
+};
