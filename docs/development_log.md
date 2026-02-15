@@ -7,6 +7,26 @@ A chronological record of all design decisions, iterations, and problem-solving 
 
 ---
 
+## Original Project Brief
+
+> I would like to create a new distributed application, consisting of 3 elements:
+>
+> 1. A Cognito instance that will hold user accounts for the purpose of authentication and authorisation in my system. It should not use the hosted UI flow — I would like to interact with the Cognito API directly from my frontend (third element, see below) for all tasks that are secure and suitable for a direct frontend → Cognito connection. I want short lived tokens with a refresh scheme please, and I would like a JWT initialiser Lambda too, to structure the JWT as I require.
+>
+> 2. A Node/Fastify-based backend that is connected to from my frontend, generally receiving a Cognito-generated JWT token along with the REST API calls that it gets (except for tasks associated with authentication processes, where it makes sense for no JWT to be present).
+>
+> 3. A React TypeScript frontend that interacts with both of the above — as a starting point this will handle sign up and sign in activity, along with a "forgot password" flow. I would like to include MFA (both text message and authenticator app) but would like to make this modular enough so as to globally exclude and include as I desire, as well as being able to turn on or off per user. Styling in Tailwind please.
+>
+> I would like to take a test-driven approach (Jest and React Testing Library) so all code written should first have tests written, which should all fail — then the code, after which the tests should all pass (or the code should be improved to make the tests pass).
+>
+> I would like to begin with a PR that creates the Terraform code to create the Cognito instance, along with some test functionality to run against the Cognito instance to verify it works with all the authentication flows described above.
+>
+> Then, I would like to create a PR to implement all the frontend components and functionality to handle the sign up, sign in, forgot password functionality.
+>
+> Lastly as a PR, I would like to create a BE that can handle receiving calls from the FE, and can check the JWT to ensure appropriate authentication on a sample call.
+
+---
+
 ## Phase 1: Infrastructure (Cognito via Terraform)
 
 ### Planning
