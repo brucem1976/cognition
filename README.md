@@ -92,23 +92,14 @@ npm test
 
 ### 1. Configure environment
 
-**Frontend** — create `frontend/.env`:
-```env
-VITE_COGNITO_USER_POOL_ID=us-east-1_xxxxxxx
-VITE_COGNITO_CLIENT_ID=your-client-id
-VITE_AWS_REGION=us-east-1
+Copy the example env files and fill in your Cognito values from `terraform output`:
+
+```bash
+cp frontend/.env.example frontend/.env
+cp backend/.env.example backend/.env
 ```
 
-**Backend** — create `backend/.env`:
-```env
-COGNITO_CLIENT_ID=your-client-id
-COGNITO_USER_POOL_ID=us-east-1_xxxxxxx
-AWS_REGION=us-east-1
-FRONTEND_URL=http://localhost:5173
-PORT=3001
-```
-
-> **Note:** Both services use the same Cognito client ID and pool ID from `terraform output`.
+> **Note:** Both services use the same Cognito client ID and pool ID. See each `.env.example` for the full list of variables.
 
 ### 2. Install dependencies
 
