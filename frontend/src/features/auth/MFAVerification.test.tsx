@@ -33,7 +33,7 @@ describe('MFAVerification Component', () => {
 
     it('calls CognitoService.respondToAuthChallenge on submit', async () => {
         const mockRespond = CognitoService.respondToAuthChallenge as jest.Mock;
-        mockRespond.mockResolvedValue({ AuthenticationResult: { AccessToken: 'token' } });
+        mockRespond.mockResolvedValue({ accessToken: 'token', idToken: 'id-token' });
 
         render(<MFAVerification
             session={mockSession}
@@ -48,8 +48,9 @@ describe('MFAVerification Component', () => {
         await waitFor(() => {
             expect(mockRespond).toHaveBeenCalledWith(
                 mockChallengeName,
-                { USERNAME: mockUsername, SMS_MFA_CODE: '123456' },
-                mockSession
+                '123456',
+                mockSession,
+                mockUsername
             );
             expect(mockOnSuccess).toHaveBeenCalled();
         });

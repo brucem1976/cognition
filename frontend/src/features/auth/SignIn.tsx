@@ -15,12 +15,12 @@ const SignIn: React.FC = () => {
         setError('');
         try {
             const result = await CognitoService.signIn(email, password);
-            if (result.AuthenticationResult) {
+            if (result.accessToken) {
                 console.log('Sign in successful', result);
                 // Handle success (redirect, etc.)
-            } else if (result.ChallengeName) {
-                setChallengeName(result.ChallengeName);
-                setSession(result.Session || '');
+            } else if (result.challengeName) {
+                setChallengeName(result.challengeName);
+                setSession(result.session || '');
                 setStep('mfa');
             }
         } catch (err: any) {

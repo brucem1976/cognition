@@ -11,5 +11,11 @@ export default defineConfig(({ mode }) => {
       'process.env.VITE_COGNITO_USER_POOL_ID': JSON.stringify(env.VITE_COGNITO_USER_POOL_ID),
       'process.env.VITE_AWS_REGION': JSON.stringify(env.VITE_AWS_REGION),
     },
+    server: {
+      proxy: {
+        '/auth': 'http://localhost:3001',
+        '/api': 'http://localhost:3001',
+      },
+    },
   }
 })

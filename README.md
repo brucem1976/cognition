@@ -7,27 +7,34 @@ A distributed application built with React, TypeScript, AWS Cognito, and Terrafo
 ```
 cognition/
 ├── frontend/          # React + TypeScript + Tailwind CSS (Vite)
-├── terraform/         # AWS infrastructure (Cognito User Pool, Lambda)
-├── tests/infra/       # Integration tests for Cognito flows
-└── functions/         # Lambda functions (pre-token generation)
+├── backend/           # Express + TypeScript auth proxy & API
+├── terraform/         # AWS infrastructure (Cognito, Lambda, SES)
+└── tests/infra/       # Integration tests for Cognito flows
 ```
 
-### Authentication
+### Authentication Flow
 
-The app uses **AWS Cognito** for authentication, with the frontend calling the Cognito SDK directly. Key features:
+```
+┌──────────┐       ┌──────────┐       ┌──────────┐
+│ Frontend │──────►│ Backend  │──────►│ Cognito  │
+│ (Vite)   │◄──────│ (Express)│◄──────│ (AWS)    │
+└──────────┘       └──────────┘       └──────────┘
+  :5173              :3001
+```
 
-- **Sign Up** with email verification
-- **Sign In** with optional MFA (SMS or TOTP)
-- **Forgot Password** with code verification
-- Pre-token generation Lambda for custom JWT claims
+- **Sign Up, Forgot Password** → Frontend calls Cognito SDK directly (no tokens involved)
+- **Sign In, MFA, Refresh, Sign Out** → Frontend calls Backend, which proxies to Cognito
+- **Refresh token** → Stored in HTTP-only cookie (immune to XSS)
+- **Access/ID tokens** → Returned in JSON body, held in React state
+- **Protected API calls** → Backend verifies JWTs via Cognito JWKS
 
 ### Token Configuration
 
-| Token | Duration | Notes |
+| Token | Duration | Storage |
 |---|---|---|
-| Access Token | 60 minutes | Short-lived, used for API authorization |
-| ID Token | 60 minutes | Contains user identity claims |
-| Refresh Token | 30 days | Used to obtain new access/id tokens |
+| Access Token | 60 minutes | React state (in-memory) |
+| ID Token | 60 minutes | React state (in-memory) |
+| Refresh Token | 30 days | HTTP-only cookie (server-managed) |
 
 ---
 
@@ -52,25 +59,22 @@ terraform apply
 
 This creates:
 - A Cognito User Pool (`cognition-user-pool`) with email as username
-- A User Pool Client (`cognition-frontend-client`) for direct frontend auth
+- A User Pool Client (`cognition-frontend-client`)
 - A Pre-Token Generation Lambda
 - IAM roles for Lambda execution and SMS (MFA)
 
 ### 2. Capture outputs
 
-After `terraform apply`, note the outputs:
-
 ```bash
 terraform output
 ```
 
-You'll see:
 ```
-cognito_client_id   = "your-client-id"
+cognito_client_id    = "your-client-id"
 cognito_user_pool_id = "us-east-1_xxxxxxx"
 ```
 
-These values are needed for the frontend configuration.
+These values are needed for both the frontend and backend configuration.
 
 ### 3. Run infrastructure tests (optional)
 
@@ -80,52 +84,66 @@ npm install
 npm test
 ```
 
-This runs integration tests against the live Cognito service (sign up, sign in, forgot password flows).
-
-> **Note:** These tests create real users in your Cognito pool and require the `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`, and `AWS_REGION` environment variables.
+> **Note:** These tests create real users in your Cognito pool.
 
 ---
 
-## Phase 2: Run the Frontend
+## Phase 2 & 3: Run the Application Locally
 
-### 1. Install dependencies
+### 1. Configure environment
 
-```bash
-cd frontend
-npm install
-```
-
-### 2. Configure environment
-
-Create a `.env` file in the `frontend/` directory with the Terraform outputs:
-
+**Frontend** — create `frontend/.env`:
 ```env
 VITE_COGNITO_USER_POOL_ID=us-east-1_xxxxxxx
 VITE_COGNITO_CLIENT_ID=your-client-id
 VITE_AWS_REGION=us-east-1
 ```
 
-### 3. Start the dev server
+**Backend** — create `backend/.env`:
+```env
+COGNITO_CLIENT_ID=your-client-id
+COGNITO_USER_POOL_ID=us-east-1_xxxxxxx
+AWS_REGION=us-east-1
+FRONTEND_URL=http://localhost:5173
+PORT=3001
+```
+
+> **Note:** Both services use the same Cognito client ID and pool ID from `terraform output`.
+
+### 2. Install dependencies
 
 ```bash
+cd backend && npm install
+cd ../frontend && npm install
+```
+
+### 3. Start both services
+
+Run each in a separate terminal:
+
+```bash
+# Terminal 1: Backend (port 3001)
+cd backend
+npm run dev
+
+# Terminal 2: Frontend (port 5173)
+cd frontend
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`.
+The frontend Vite dev server automatically proxies `/auth/*` and `/api/*` requests to the backend on port 3001.
+
+Open `http://localhost:5173` in your browser.
 
 ### 4. Run tests
 
 ```bash
-npm test
-```
+# Backend tests (15 tests)
+cd backend && npm test
 
-This runs all unit tests (22 tests across 6 suites) covering:
-- `CognitoService` — SDK interactions
-- `SignUp` — registration + email verification flow
-- `SignIn` — login + MFA challenge handling
-- `MFAVerification` — MFA code submission
-- `ForgotPassword` — password reset flow
-- `App` — routing
+# Frontend tests (25 tests)
+cd frontend && npm test
+```
 
 ### 5. Available routes
 
@@ -135,6 +153,16 @@ This runs all unit tests (22 tests across 6 suites) covering:
 | `/signin` | SignIn | Login with email/password |
 | `/signup` | SignUp | Register new account |
 | `/forgot-password` | ForgotPassword | Reset password |
+
+### 6. API endpoints
+
+| Endpoint | Auth | Description |
+|---|---|---|
+| `POST /auth/signin` | None | Sign in, returns tokens, sets refresh cookie |
+| `POST /auth/signin/mfa` | None | Complete MFA challenge |
+| `POST /auth/refresh` | Cookie | Refresh access token using HTTP-only cookie |
+| `POST /auth/signout` | None | Clears refresh cookie |
+| `GET /api/me` | Bearer | Returns decoded JWT claims (sample protected route) |
 
 ---
 
@@ -151,6 +179,6 @@ This runs all unit tests (22 tests across 6 suites) covering:
 
 ---
 
-## Next Steps
+## SES Email Configuration (Not Yet Enabled)
 
-- **Phase 3: Backend** — Express/Fastify API with HTTP-only cookie token storage and automatic token refresh
+The Cognito pool currently uses the default email service (50 emails/day limit). SES configuration is prepared in `terraform/ses.tf` — see the activation instructions in that file.

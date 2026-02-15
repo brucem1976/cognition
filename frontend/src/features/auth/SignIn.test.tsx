@@ -24,7 +24,7 @@ describe('SignIn Component', () => {
 
     it('calls CognitoService.signIn on submit', async () => {
         const mockSignIn = CognitoService.signIn as jest.Mock;
-        mockSignIn.mockResolvedValue({ AuthenticationResult: { AccessToken: 'token' } });
+        mockSignIn.mockResolvedValue({ accessToken: 'token', idToken: 'id-token' });
 
         render(<SignIn />);
 
@@ -56,9 +56,8 @@ describe('SignIn Component', () => {
     it('shows MFA verification when challenge is returned', async () => {
         const mockSignIn = CognitoService.signIn as jest.Mock;
         mockSignIn.mockResolvedValue({
-            ChallengeName: 'SMS_MFA',
-            Session: 'session-123',
-            ChallengeParameters: { USER_ID_FOR_SRP: 'test@example.com' }
+            challengeName: 'SMS_MFA',
+            session: 'session-123',
         });
 
         render(<SignIn />);

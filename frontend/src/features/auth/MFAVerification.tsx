@@ -16,18 +16,8 @@ const MFAVerification: React.FC<MFAVerificationProps> = ({ session, username, ch
         e.preventDefault();
         setError('');
         try {
-            const challengeResponses: Record<string, string> = {
-                USERNAME: username
-            };
-
-            if (challengeName === 'SMS_MFA') {
-                challengeResponses['SMS_MFA_CODE'] = code;
-            } else if (challengeName === 'SOFTWARE_TOKEN_MFA') {
-                challengeResponses['SOFTWARE_TOKEN_MFA_CODE'] = code;
-            }
-
-            const result = await CognitoService.respondToAuthChallenge(challengeName, challengeResponses, session);
-            if (result.AuthenticationResult) {
+            const result = await CognitoService.respondToAuthChallenge(challengeName, code, session, username);
+            if (result.accessToken) {
                 onSuccess(result);
             } else {
                 setError('Verification failed or additional steps required.');
