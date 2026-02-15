@@ -25,3 +25,10 @@ terraform/*.zip
 # Logs
 *.log
 npm-debug.log*
+node_modules
+.DS_Store
+.env
+*.tfstate
+*.tfstate.backup
+.terraform/
+lambda.zip
